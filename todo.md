@@ -38,8 +38,8 @@ Dokumen ini mencatat urutan kerja yang perlu dieksekusi pada sistem antrian tike
 - [ ] Pastikan halaman pembuatan tiket memandu user dengan jelas dan minim langkah.
 - [x] Tambahkan atau perkuat ringkasan status tiket pada halaman detail tiket.
 - [ ] Tambahkan kontrol yang memudahkan perpindahan status atau tindakan cepat pada tiket aktif.
-- [ ] Tinjau `TeamSwitcher` agar pergantian tim tidak membingungkan dan selalu menampilkan konteks aktif.
-- [ ] Tinjau komponen layout agar navigasi utama tetap jelas di desktop dan mobile.
+- [x] Tinjau `TeamSwitcher` agar pergantian tim tidak membingungkan dan selalu menampilkan konteks aktif.
+- [x] Tinjau komponen layout agar navigasi utama tetap jelas di desktop dan mobile.
 
 ## 6. Tambahkan observability dasar
 

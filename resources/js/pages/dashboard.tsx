@@ -1,7 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Plus } from 'lucide-react';
-import { useState } from 'react';
-import PendingInvitationsModal from '@/components/pending-invitations-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,34 +15,23 @@ import {
     index as ticketsIndex,
     show as showTicket,
 } from '@/routes/tickets';
-import type { DashboardInvitation, Ticket, TicketStatusStat } from '@/types';
+import type { Ticket, TicketStatusStat } from '@/types';
 
 type Props = {
-    pendingInvitations?: DashboardInvitation[];
     ticketStats?: TicketStatusStat[];
     recentTickets?: Ticket[];
 };
 
 export default function Dashboard({
-    pendingInvitations = [],
     ticketStats = [],
     recentTickets = [],
 }: Props) {
     const { auth } = usePage().props;
     const canCreateTicket = auth.user.role === 'user';
-    const [showInvitations, setShowInvitations] = useState(
-        pendingInvitations.length > 0,
-    );
 
     return (
         <>
             <Head title="Dashboard" />
-
-            <PendingInvitationsModal
-                invitations={pendingInvitations}
-                open={pendingInvitations.length > 0 && showInvitations}
-                onOpenChange={setShowInvitations}
-            />
 
             <div className="space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -197,11 +184,11 @@ export default function Dashboard({
     );
 }
 
-Dashboard.layout = (props: { currentTeam?: { slug: string } | null }) => ({
+Dashboard.layout = () => ({
     breadcrumbs: [
         {
             title: 'Dashboard',
-            href: props.currentTeam ? dashboard(props.currentTeam.slug) : '/',
+            href: dashboard(),
         },
     ],
 });

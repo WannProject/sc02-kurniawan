@@ -19,8 +19,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 
 export default function Welcome() {
-    const { auth, currentTeam } = usePage().props;
-    const dashboardUrl = currentTeam ? dashboard(currentTeam.slug) : '/';
+    const { auth } = usePage().props;
+    const dashboardUrl = dashboard();
 
     return (
         <>
@@ -41,16 +41,16 @@ export default function Welcome() {
 
                             <div className="max-w-2xl space-y-5">
                                 <Badge variant="outline" className="w-fit">
-                                    Team-aware ticketing
+                                    Support queue
                                 </Badge>
                                 <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                                    Kelola tiket, tim, dan status kerja dalam
-                                    satu alur yang rapi.
+                                    Kelola tiket support, status kerja, dan
+                                    riwayat perubahan dalam satu alur yang rapi.
                                 </h1>
                                 <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                                     Halaman login, registrasi, dan dashboard
-                                    sekarang memakai komponen shadcn yang
-                                    konsisten dengan aplikasi utama.
+                                    memakai komponen shadcn yang konsisten
+                                    dengan aplikasi utama.
                                 </p>
                             </div>
 
@@ -89,9 +89,9 @@ export default function Welcome() {
                                     },
                                     {
                                         icon: Users,
-                                        title: 'Team routing',
+                                        title: 'Access control',
                                         description:
-                                            'Teams stay separate and switching stays explicit.',
+                                            'Role checks keep access aligned with the workflow.',
                                     },
                                     {
                                         icon: ShieldCheck,
@@ -156,7 +156,6 @@ export default function Welcome() {
                                 <div className="grid gap-3">
                                     {[
                                         'Authenticated users land in the dashboard.',
-                                        'Team invitations can be accepted from email.',
                                         'Ticket status changes are tracked in history.',
                                     ].map((item) => (
                                         <div
