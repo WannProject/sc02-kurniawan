@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\TeamRole;
+use App\Enums\UserRole;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
@@ -44,5 +45,7 @@ test('new users can register', function () {
     $this->assertAuthenticated();
 
     $user = User::where('email', 'test@example.com')->first();
+    expect($user)->not->toBeNull();
+    expect($user?->role)->toBe(UserRole::User);
     $response->assertRedirect(route('dashboard'));
 });

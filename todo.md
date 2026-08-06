@@ -61,6 +61,12 @@ Dokumen ini mencatat urutan kerja yang perlu dieksekusi pada sistem antrian tike
 - [x] Tambahkan `compose.yml` untuk menjalankan service MySQL lokal.
 - [x] Validasi konfigurasi compose dengan `docker compose config`.
 
+## 9. Role aplikasi PRD
+
+- [x] Tambahkan role aplikasi dasar `user`, `agent`, dan `admin` pada model user.
+- [x] Pastikan user baru terdaftar sebagai `user` secara default.
+- [ ] Tambahkan pembatasan akses berbasis role di area admin dan agent.
+
 ## Urutan Eksekusi yang Disarankan
 
 1. Test alur inti.
