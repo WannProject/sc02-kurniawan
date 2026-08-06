@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\TicketController as ApiTicketController;
 use App\Http\Controllers\Api\TicketHistoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -45,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:user'])->group(function () {
     Route::get('tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('tickets', [TicketController::class, 'store'])->name('tickets.store');
+    Route::post('api/tickets', [ApiTicketController::class, 'store'])->name('api.tickets.store');
 });
 
 require __DIR__.'/settings.php';

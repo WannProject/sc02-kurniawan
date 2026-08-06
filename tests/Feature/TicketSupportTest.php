@@ -68,6 +68,70 @@ test('tickets create page can be rendered', function () {
         );
 });
 
+test('api tickets endpoint creates and assigns tickets asynchronously', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('api.tickets.store'), [
+            'title' => 'Mesin printer offline',
+            'description' => 'Printer kasir tidak bisa mencetak struk.',
+            'priority' => TicketPriority::High->value,
+        ]);
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('data.title', 'Mesin printer offline')
+        ->assertJsonPath('data.description', 'Printer kasir tidak bisa mencetak struk.')
+        ->assertJsonPath('data.priority.value', TicketPriority::High->value)
+        ->assertJsonPath('data.status.value', TicketStatus::Assigned->value)
+        ->assertJsonPath('data.created_by.email', $user->email)
+        ->assertJsonPath('data.assigned_agent.user.email', $agentUser->email);
+
+    $ticket = Ticket::query()->where('title', 'Mesin printer offline')->firstOrFail();
+
+    expect($ticket->creator->is($user))->toBeTrue()
+        ->and($ticket->assigned_agent_id)->toBe($agent->id)
+        ->and($ticket->status)->toBe(TicketStatus::Assigned);
+
+    Queue::assertPushed(SendTicketAssignedNotificationJob::class, fn (SendTicketAssignedNotificationJob $job) => $job->ticketId === $ticket->id
+        && $job->agentId === $agent->id);
+});
+
+test('api tickets endpoint returns validation errors as json', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('api.tickets.store'), [
+            'title' => '',
+            'description' => '',
+            'priority' => 'urgent',
+        ]);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['title', 'description', 'priority']);
+});
+
+test('agents cannot create tickets through the api endpoint', function () {
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+
+    $response = $this
+        ->actingAs($agentUser)
+        ->postJson(route('api.tickets.store'), [
+            'title' => 'Mesin printer offline',
+            'description' => 'Printer kasir tidak bisa mencetak struk.',
+            'priority' => TicketPriority::High->value,
+        ]);
+
+    $response->assertForbidden();
+});
+
 test('ticket show page can be rendered with transitions', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->for($user, 'creator')->create([
