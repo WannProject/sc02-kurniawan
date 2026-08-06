@@ -38,8 +38,8 @@ Dokumen ini mencatat urutan kerja yang perlu dieksekusi pada sistem antrian tike
 - [ ] Pastikan halaman pembuatan tiket memandu user dengan jelas dan minim langkah.
 - [x] Tambahkan atau perkuat ringkasan status tiket pada halaman detail tiket.
 - [ ] Tambahkan kontrol yang memudahkan perpindahan status atau tindakan cepat pada tiket aktif.
-- [ ] Tinjau `TeamSwitcher` agar pergantian tim tidak membingungkan dan selalu menampilkan konteks aktif.
-- [ ] Tinjau komponen layout agar navigasi utama tetap jelas di desktop dan mobile.
+- [x] Tinjau `TeamSwitcher` agar pergantian tim tidak membingungkan dan selalu menampilkan konteks aktif.
+- [x] Tinjau komponen layout agar navigasi utama tetap jelas di desktop dan mobile.
 
 ## 6. Tambahkan observability dasar
 
@@ -54,6 +54,20 @@ Dokumen ini mencatat urutan kerja yang perlu dieksekusi pada sistem antrian tike
 - [x] Cek ulang alur utama dari sisi user: buat tiket, lihat detail tiket, ubah status, pindah tim.
 - [x] Pastikan tidak ada regresi di UI maupun authorization.
 - [ ] Dokumentasikan keputusan teknis yang baru jika ada aturan bisnis yang berubah.
+
+## 8. Setup environment lokal
+
+- [x] Pindahkan konfigurasi default ke MySQL di `.env.example`.
+- [x] Tambahkan `compose.yml` untuk menjalankan service MySQL lokal.
+- [x] Validasi konfigurasi compose dengan `docker compose config`.
+
+## 9. Role aplikasi PRD
+
+- [x] Tambahkan role aplikasi dasar `user`, `agent`, dan `admin` pada model user.
+- [x] Pastikan user baru terdaftar sebagai `user` secara default.
+- [x] Tambahkan pembatasan akses berbasis role di area ticket create, ticket index, ticket show, dan status update.
+- [x] Buka akses status update untuk admin sebagai override.
+- [ ] Tambahkan pembatasan akses berbasis role di area admin settings yang tersisa.
 
 ## Urutan Eksekusi yang Disarankan
 

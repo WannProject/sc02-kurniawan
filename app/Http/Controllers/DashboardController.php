@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TicketStatus;
-use App\Models\TeamInvitation;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,37 +12,25 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $email = strtolower($request->user()->email);
+        $user = $request->user();
 
-        $pendingInvitations = TeamInvitation::query()
-            ->with(['inviter', 'team'])
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->whereNull('accepted_at')
-            ->where(fn ($query) => $query
-                ->whereNull('expires_at')
-                ->orWhere('expires_at', '>=', now()))
-            ->latest()
-            ->get()
-            ->map(fn (TeamInvitation $invitation) => [
-                'code' => $invitation->code,
-                'inviterName' => $invitation->inviter->name,
-                'team' => [
-                    'name' => $invitation->team->name,
-                    'slug' => $invitation->team->slug,
-                ],
-            ]);
+        $ticketQuery = Ticket::query();
+
+        if ($user->isUser()) {
+            $ticketQuery->whereBelongsTo($user, 'creator');
+        }
 
         $ticketStats = collect(TicketStatus::cases())
             ->map(fn (TicketStatus $status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
-                'count' => Ticket::query()
+                'count' => (clone $ticketQuery)
                     ->where('status', $status)
                     ->count(),
             ])
             ->values();
 
-        $recentTickets = Ticket::query()
+        $recentTickets = (clone $ticketQuery)
             ->with(['creator', 'assignedAgent.user'])
             ->latest()
             ->limit(5)
@@ -79,7 +66,6 @@ class DashboardController extends Controller
             ->values();
 
         return Inertia::render('dashboard', [
-            'pendingInvitations' => $pendingInvitations,
             'ticketStats' => $ticketStats,
             'recentTickets' => $recentTickets,
         ]);

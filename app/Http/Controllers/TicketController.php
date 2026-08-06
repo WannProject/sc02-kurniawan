@@ -10,17 +10,24 @@ use App\Models\Ticket;
 use App\Services\TicketAssignmentService;
 use App\Services\TicketStatusService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TicketController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $tickets = Ticket::query()
+        $query = Ticket::query()
             ->with(['creator', 'assignedAgent.user'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        if ($request->user()?->isUser()) {
+            $query->whereBelongsTo($request->user(), 'creator');
+        }
+
+        $tickets = $query->paginate(15);
 
         return Inertia::render('tickets/index', [
             'tickets' => TicketResource::collection($tickets),
@@ -29,6 +36,8 @@ class TicketController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Ticket::class);
+
         return Inertia::render('tickets/create', [
             'priorities' => collect(TicketPriority::cases())
                 ->map(fn (TicketPriority $priority) => [
@@ -54,6 +63,8 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket, TicketStatusService $statusService): Response
     {
+        Gate::authorize('view', $ticket);
+
         $ticket->load(['creator', 'assignedAgent.user']);
 
         return Inertia::render('tickets/show', [
