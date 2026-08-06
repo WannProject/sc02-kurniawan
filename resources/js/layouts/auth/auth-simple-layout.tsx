@@ -147,21 +147,6 @@ export default function AuthSimpleLayout({
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 {children}
-
-                                <Separator />
-
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">
-                                        Return to public home
-                                    </span>
-                                    <Link
-                                        href={home()}
-                                        className="inline-flex items-center gap-2 font-medium text-foreground hover:underline"
-                                    >
-                                        Home
-                                        <ArrowRight className="size-4" />
-                                    </Link>
-                                </div>
                             </CardContent>
                         </Card>
                     </div>
