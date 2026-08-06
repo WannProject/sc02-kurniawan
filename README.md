@@ -6,6 +6,7 @@ Aplikasi antrian tiket support berbasis Laravel 13, React, Inertia, MySQL, dan d
 
 - User membuat tiket dengan judul, deskripsi, dan prioritas.
 - Tiket otomatis di-assign ke agent aktif dengan beban kerja paling rendah.
+- Admin dapat mengelola agent dari halaman Agent Management.
 - Status tiket dikontrol dengan alur valid: `open -> assigned -> in_progress -> resolved -> closed`.
 - Setiap perubahan status dicatat ke audit trail.
 - Email dikirim lewat queue agar request utama tetap cepat.
@@ -183,7 +184,32 @@ php artisan queue:work
 
 ## Alur Penggunaan Sistem
 
-### 1. User Membuat Tiket
+### 1. Admin Mengelola Agent
+
+Admin login, lalu buka halaman:
+
+```txt
+/agents
+```
+
+Di halaman Agent Management, admin dapat:
+
+- membuat akun agent baru langsung dari form admin;
+- mengaktifkan agent;
+- menonaktifkan agent;
+- melihat jumlah ticket aktif yang sedang ditangani agent;
+- melihat total ticket yang pernah assigned ke agent.
+
+Saat admin membuat akun agent baru:
+
+1. user baru dibuat di tabel `users` dengan role `agent`;
+2. personal team dibuat untuk akun agent tersebut;
+3. data agent dibuat di tabel `agents`;
+4. jika `is_active = true`, agent dapat dipilih oleh sistem auto assignment.
+
+Agent yang dinonaktifkan tetap ada di database, tetapi tidak akan dipilih untuk menerima ticket baru.
+
+### 2. User Membuat Tiket
 
 User login, masuk ke halaman ticket create, lalu mengisi:
 
@@ -199,7 +225,9 @@ Setelah tiket dibuat:
 4. audit trail mencatat `open -> assigned`;
 5. email assignment dikirim ke agent melalui queue.
 
-### 2. Agent Menangani Tiket
+Jika tidak ada agent aktif, ticket tetap berstatus `open` tanpa assignment sampai ada agent aktif dan ticket diproses ulang secara manual/lanjutan.
+
+### 3. Agent Menangani Tiket
 
 Agent login dan membuka detail tiket yang assigned.
 
@@ -211,17 +239,17 @@ Agent dapat:
 
 Saat agent membalas tiket, email dikirim ke user pembuat tiket.
 
-### 3. User Membalas Tiket
+### 4. User Membalas Tiket
 
 User dapat membuka detail tiket dan menambahkan balasan.
 
 Saat user membalas tiket, email dikirim ke agent yang assigned.
 
-### 4. Tiket Diselesaikan
+### 5. Tiket Diselesaikan
 
 Saat agent/admin mengubah status tiket menjadi `resolved`, sistem mengirim email resolved ke user pembuat tiket.
 
-### 5. Tiket Ditutup
+### 6. Tiket Ditutup
 
 Status `resolved` dapat diubah menjadi `closed` sesuai state machine.
 
@@ -273,6 +301,21 @@ Proses assignment menggunakan database transaction dan row lock agar lebih aman 
 
 Jika tidak ada agent aktif, tiket tetap berada di status `open` tanpa agent.
 
+## Role dan Hak Akses
+
+| Role    | Hak akses utama                                                           |
+| ------- | ------------------------------------------------------------------------- |
+| `user`  | Membuat ticket, melihat ticket sendiri, membalas ticket sendiri           |
+| `agent` | Melihat ticket, menangani ticket yang assigned kepadanya, membalas ticket |
+| `admin` | Melihat seluruh ticket, update status ticket, mengelola agent             |
+
+Catatan:
+
+- Agent tidak dapat membuat ticket.
+- User biasa tidak dapat membuka halaman Agent Management.
+- Admin dapat membuat akun agent baru melalui `/agents`.
+- Auto assignment hanya memilih agent yang statusnya aktif.
+
 ## Audit Trail
 
 Setiap perubahan status masuk ke `ticket_status_histories`.
@@ -302,14 +345,18 @@ Email assignment bersifat idempotent memakai `assigned_notification_sent_at`, se
 
 ## Endpoint Web
 
-| Method  | Endpoint                    | Fungsi               |
-| ------- | --------------------------- | -------------------- |
-| `GET`   | `/tickets`                  | Daftar tiket         |
-| `GET`   | `/tickets/create`           | Form buat tiket      |
-| `POST`  | `/tickets`                  | Simpan tiket dari UI |
-| `GET`   | `/tickets/{ticket}`         | Detail tiket         |
-| `PATCH` | `/tickets/{ticket}/status`  | Update status tiket  |
-| `POST`  | `/tickets/{ticket}/replies` | Kirim balasan tiket  |
+| Method  | Endpoint                    | Fungsi                   |
+| ------- | --------------------------- | ------------------------ |
+| `GET`   | `/dashboard`                | Dashboard ticket         |
+| `GET`   | `/agents`                   | Halaman Agent Management |
+| `POST`  | `/agents`                   | Buat akun agent baru     |
+| `PATCH` | `/agents/{agent}`           | Aktif/nonaktifkan agent  |
+| `GET`   | `/tickets`                  | Daftar tiket             |
+| `GET`   | `/tickets/create`           | Form buat tiket          |
+| `POST`  | `/tickets`                  | Simpan tiket dari UI     |
+| `GET`   | `/tickets/{ticket}`         | Detail tiket             |
+| `PATCH` | `/tickets/{ticket}/status`  | Update status tiket      |
+| `POST`  | `/tickets/{ticket}/replies` | Kirim balasan tiket      |
 
 ## Endpoint API
 
@@ -373,6 +420,12 @@ Jalankan test ticket support saja:
 
 ```bash
 php artisan test --compact tests/Feature/TicketSupportTest.php
+```
+
+Jalankan test agent management saja:
+
+```bash
+php artisan test --compact tests/Feature/AgentManagementTest.php
 ```
 
 Format PHP:
@@ -442,6 +495,20 @@ npm run build
 ### Tidak Bisa Membuat Tiket
 
 Pastikan login sebagai user dengan role `user`. Agent tidak diizinkan membuat tiket.
+
+### Ticket Tidak Ter-assign ke Agent
+
+Pastikan ada minimal satu agent aktif di halaman `/agents`.
+
+Jika semua agent nonaktif:
+
+- ticket tetap dibuat;
+- status ticket tetap `open`;
+- email assignment tidak dikirim karena belum ada agent penerima.
+
+### Tidak Bisa Akses Agent Management
+
+Pastikan login sebagai user dengan role `admin`. Halaman `/agents` hanya untuk admin.
 
 ### Tidak Bisa Update Status
 

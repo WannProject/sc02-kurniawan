@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, LayoutGrid, Menu, Search } from 'lucide-react';
+import { Bell, LayoutGrid, Menu, Search, UserCog } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/sheet';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
+import { index as agentsIndex } from '@/routes/agents';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -32,6 +33,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth, name: appName } = usePage().props;
     const getInitials = useInitials();
     const dashboardUrl = dashboard();
+    const canManageAgents = auth.user.role === 'admin';
 
     return (
         <>
@@ -97,6 +99,18 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     Dashboard
                                                 </Link>
                                             </Button>
+                                            {canManageAgents ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full justify-start rounded-lg"
+                                                    asChild
+                                                >
+                                                    <Link href={agentsIndex()}>
+                                                        <UserCog className="size-4" />
+                                                        Agents
+                                                    </Link>
+                                                </Button>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </SheetContent>
@@ -113,13 +127,27 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     <div className="hidden flex-1 justify-center px-4 lg:flex">
-                        <div className="relative w-full max-w-xl">
-                            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                aria-label="Search application"
-                                placeholder="Search tickets, agents, status..."
-                                className="h-10 rounded-lg border-border/70 bg-muted/30 pl-9"
-                            />
+                        <div className="flex w-full max-w-2xl items-center gap-2">
+                            <div className="relative flex-1">
+                                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    aria-label="Search application"
+                                    placeholder="Search tickets, agents, status..."
+                                    className="h-10 rounded-lg border-border/70 bg-muted/30 pl-9"
+                                />
+                            </div>
+                            {canManageAgents ? (
+                                <Button
+                                    variant="ghost"
+                                    className="h-10 rounded-lg px-3"
+                                    asChild
+                                >
+                                    <Link href={agentsIndex()}>
+                                        <UserCog className="size-4" />
+                                        Agents
+                                    </Link>
+                                </Button>
+                            ) : null}
                         </div>
                     </div>
 

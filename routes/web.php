@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Api\TicketController as ApiTicketController;
 use App\Http\Controllers\Api\TicketHistoryController;
 use App\Http\Controllers\DashboardController;
@@ -14,6 +15,14 @@ Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+});
+
+Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
+    Route::get('agents', [AgentController::class, 'index'])->name('agents.index');
+    Route::post('agents', [AgentController::class, 'store'])->name('agents.store');
+    Route::patch('agents/{agent}', [AgentController::class, 'update'])
+        ->whereNumber('agent')
+        ->name('agents.update');
 });
 
 Route::prefix('{current_team}')

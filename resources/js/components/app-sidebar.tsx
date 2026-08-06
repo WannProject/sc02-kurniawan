@@ -1,5 +1,5 @@
-import { Link } from '@inertiajs/react';
-import { LayoutGrid, Ticket } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { LayoutGrid, Ticket, UserCog } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { NavMain } from '@/components/nav-main';
 import {
@@ -8,11 +8,14 @@ import {
     SidebarHeader,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as agentsIndex } from '@/routes/agents';
 import { index as ticketsIndex } from '@/routes/tickets';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
+    const { auth } = usePage().props;
     const dashboardUrl = dashboard();
+    const canManageAgents = auth.user.role === 'admin';
 
     const mainNavItems: NavItem[] = [
         {
@@ -25,6 +28,15 @@ export function AppSidebar() {
             href: ticketsIndex(),
             icon: Ticket,
         },
+        ...(canManageAgents
+            ? [
+                  {
+                      title: 'Agents',
+                      href: agentsIndex(),
+                      icon: UserCog,
+                  },
+              ]
+            : []),
     ];
 
     return (
