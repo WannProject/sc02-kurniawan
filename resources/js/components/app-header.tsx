@@ -1,12 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import {
-    Bell,
-    BookOpen,
-    Folder,
-    LayoutGrid,
-    Menu,
-    Search,
-} from 'lucide-react';
+import { Bell, LayoutGrid, Menu, Search } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -26,34 +19,14 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
-import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem, NavItem } from '@/types';
+import type { BreadcrumbItem } from '@/types';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
-
-const quickLinks: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth, name: appName } = usePage().props;
@@ -84,7 +57,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         Navigation menu
                                     </SheetTitle>
                                     <SheetHeader className="border-b border-sidebar-border/70 px-4 py-4 text-left">
-                                        <Link href={dashboardUrl} className="flex items-center gap-2">
+                                        <Link
+                                            href={dashboardUrl}
+                                            className="flex items-center gap-2"
+                                        >
                                             <AppLogoIcon className="size-7 fill-current text-black dark:text-white" />
                                             <div className="grid leading-tight">
                                                 <span className="text-sm font-semibold">
@@ -105,7 +81,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                 Operations
                                             </Badge>
                                             <p className="mt-2 text-sm text-sidebar-foreground/80">
-                                                Workspace navigation for ticket handling.
+                                                Workspace navigation for ticket
+                                                handling.
                                             </p>
                                         </div>
 
@@ -120,37 +97,24 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     Dashboard
                                                 </Link>
                                             </Button>
-                                            {quickLinks.map((item) => (
-                                                <Button
-                                                    key={item.title}
-                                                    variant="ghost"
-                                                    className="w-full justify-start rounded-lg"
-                                                    asChild
-                                                >
-                                                    <a
-                                                        href={toUrl(item.href)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                    >
-                                                        {item.icon && <item.icon className="size-4" />}
-                                                        {item.title}
-                                                    </a>
-                                                </Button>
-                                            ))}
                                         </div>
                                     </div>
                                 </SheetContent>
                             </Sheet>
                         </div>
 
-                        <Link href={dashboardUrl} prefetch className="flex items-center gap-2">
+                        <Link
+                            href={dashboardUrl}
+                            prefetch
+                            className="flex items-center gap-2"
+                        >
                             <AppLogo />
                         </Link>
                     </div>
 
                     <div className="hidden flex-1 justify-center px-4 lg:flex">
                         <div className="relative w-full max-w-xl">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 aria-label="Search application"
                                 placeholder="Search tickets, agents, status..."
@@ -160,35 +124,6 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     <div className="ml-auto flex items-center gap-2">
-                        <div className="hidden items-center gap-1 lg:flex">
-                            {quickLinks.map((item) => (
-                                <TooltipProvider key={item.title} delayDuration={0}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="size-9 rounded-lg"
-                                                asChild
-                                            >
-                                                <a
-                                                    href={toUrl(item.href)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                >
-                                                    <span className="sr-only">{item.title}</span>
-                                                    {item.icon && <item.icon className="size-4" />}
-                                                </a>
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{item.title}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            ))}
-                        </div>
-
                         <Button
                             variant="ghost"
                             size="icon"

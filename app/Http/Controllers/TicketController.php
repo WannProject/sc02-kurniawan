@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TicketPriority;
 use App\Http\Requests\StoreTicketRequest;
+use App\Http\Resources\TicketReplyResource;
 use App\Http\Resources\TicketResource;
 use App\Http\Resources\TicketStatusHistoryResource;
 use App\Models\Ticket;
@@ -61,14 +62,14 @@ class TicketController extends Controller
         return to_route('tickets.show', $ticket);
     }
 
-    public function show(Ticket $ticket, TicketStatusService $statusService): Response
+    public function show(Request $request, Ticket $ticket, TicketStatusService $statusService): Response
     {
         Gate::authorize('view', $ticket);
 
         $ticket->load(['creator', 'assignedAgent.user']);
 
         return Inertia::render('tickets/show', [
-            'ticket' => new TicketResource($ticket),
+            'ticket' => (new TicketResource($ticket))->resolve($request),
             'availableStatuses' => $statusService->availableTransitions($ticket->status),
             'history' => TicketStatusHistoryResource::collection(
                 $ticket->statusHistories()
@@ -76,6 +77,13 @@ class TicketController extends Controller
                     ->latest()
                     ->latest('id')
                     ->limit(20)
+                    ->get()
+            ),
+            'replies' => TicketReplyResource::collection(
+                $ticket->replies()
+                    ->with('user')
+                    ->oldest()
+                    ->limit(50)
                     ->get()
             ),
         ]);

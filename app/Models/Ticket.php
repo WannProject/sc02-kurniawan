@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property-read User|null $creator
  * @property-read Agent|null $assignedAgent
  * @property-read Collection<int, TicketStatusHistory> $statusHistories
+ * @property-read Collection<int, TicketReply> $replies
  */
 #[Fillable(['created_by_id', 'assigned_agent_id', 'title', 'description', 'priority', 'status', 'assigned_notification_sent_at'])]
 class Ticket extends Model
@@ -60,6 +61,14 @@ class Ticket extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(TicketStatusHistory::class);
+    }
+
+    /**
+     * @return HasMany<TicketReply, $this>
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(TicketReply::class);
     }
 
     /**

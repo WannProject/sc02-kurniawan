@@ -41,6 +41,14 @@ return new class extends Migration
             $table->timestamp('accepted_at')->nullable();
             $table->timestamps();
         });
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreignId('current_team_id')
+                ->nullable()
+                ->after('password')
+                ->constrained('teams')
+                ->nullOnDelete();
+        });
     }
 
     /**
@@ -48,6 +56,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('current_team_id');
+        });
+
         Schema::dropIfExists('team_invitations');
         Schema::dropIfExists('team_members');
         Schema::dropIfExists('teams');

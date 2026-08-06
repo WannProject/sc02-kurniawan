@@ -37,6 +37,13 @@ export type TicketStatusHistory = {
     created_at: string | null;
 };
 
+export type TicketReply = {
+    id: number;
+    body: string;
+    user?: (TicketUser & { role: string }) | null;
+    created_at: string | null;
+};
+
 export type Paginated<T> = {
     data: T[];
     links: {

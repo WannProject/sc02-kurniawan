@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\TicketHistoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketReplyController;
 use App\Http\Controllers\TicketStatusController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,9 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('tickets/{ticket}/status', [TicketStatusController::class, 'update'])
         ->whereNumber('ticket')
         ->name('tickets.status.update');
+    Route::post('tickets/{ticket}/replies', [TicketReplyController::class, 'store'])
+        ->whereNumber('ticket')
+        ->name('tickets.replies.store');
 
     Route::get('api/tickets/{ticket}/history', TicketHistoryController::class)
         ->whereNumber('ticket')
