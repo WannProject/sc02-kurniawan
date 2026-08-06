@@ -55,6 +55,12 @@ Dokumen ini mencatat urutan kerja yang perlu dieksekusi pada sistem antrian tike
 - [x] Pastikan tidak ada regresi di UI maupun authorization.
 - [ ] Dokumentasikan keputusan teknis yang baru jika ada aturan bisnis yang berubah.
 
+## 8. Setup environment lokal
+
+- [x] Pindahkan konfigurasi default ke MySQL di `.env.example`.
+- [x] Tambahkan `compose.yml` untuk menjalankan service MySQL lokal.
+- [x] Validasi konfigurasi compose dengan `docker compose config`.
+
 ## Urutan Eksekusi yang Disarankan
 
 1. Test alur inti.
