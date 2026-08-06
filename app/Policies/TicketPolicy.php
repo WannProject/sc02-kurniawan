@@ -42,4 +42,12 @@ class TicketPolicy
         return $user->isAdmin()
             || ($user->isAgent() && ($user->agent?->is($ticket->assignedAgent) ?? false));
     }
+
+    /**
+     * Determine whether the user can reply to the ticket.
+     */
+    public function reply(User $user, Ticket $ticket): bool
+    {
+        return $this->view($user, $ticket);
+    }
 }

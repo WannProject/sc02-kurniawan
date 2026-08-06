@@ -7,6 +7,7 @@ use App\Jobs\SendTicketAssignedNotificationJob;
 use App\Mail\TicketAssignedMail;
 use App\Models\Agent;
 use App\Models\Ticket;
+use App\Models\TicketReply;
 use App\Models\User;
 use App\Services\TicketAssignmentService;
 use App\Services\TicketStatusService;
@@ -66,8 +67,13 @@ test('tickets create page can be rendered', function () {
 test('ticket show page can be rendered with transitions', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->for($user, 'creator')->create([
+        'priority' => TicketPriority::Medium,
         'status' => TicketStatus::Open,
     ]);
+    TicketReply::factory()
+        ->for($ticket)
+        ->for($user)
+        ->create(['body' => 'Terima kasih, saya cek dulu.']);
 
     app(TicketStatusService::class)->transition(
         ticket: $ticket,
@@ -84,10 +90,64 @@ test('ticket show page can be rendered with transitions', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('tickets/show')
-            ->has('ticket')
+            ->where('ticket.id', $ticket->id)
+            ->where('ticket.priority.value', TicketPriority::Medium->value)
+            ->where('ticket.status.value', TicketStatus::Assigned->value)
             ->where('availableStatuses.0.value', TicketStatus::InProgress->value)
             ->has('history.data', 1)
+            ->where('history.data.0.to_status.value', TicketStatus::Assigned->value)
+            ->has('replies.data', 1)
+            ->where('replies.data.0.body', 'Terima kasih, saya cek dulu.')
+            ->where('replies.data.0.user.id', $user->id)
         );
+});
+
+test('users can reply to their own tickets', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('tickets.replies.store', $ticket), [
+            'body' => 'Terima kasih, sudah bisa.',
+        ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('ticket_replies', [
+        'ticket_id' => $ticket->id,
+        'user_id' => $user->id,
+        'body' => 'Terima kasih, sudah bisa.',
+    ]);
+});
+
+test('users cannot reply to tickets created by someone else', function () {
+    $owner = User::factory()->create();
+    $visitor = User::factory()->create();
+    $ticket = Ticket::factory()->for($owner, 'creator')->create();
+
+    $response = $this
+        ->actingAs($visitor)
+        ->post(route('tickets.replies.store', $ticket), [
+            'body' => 'Saya bantu cek.',
+        ]);
+
+    $response->assertForbidden();
+
+    expect(TicketReply::query()->whereBelongsTo($ticket)->exists())->toBeFalse();
+});
+
+test('ticket replies require a body', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->post(route('tickets.replies.store', $ticket), [
+            'body' => '',
+        ]);
+
+    $response->assertSessionHasErrors('body');
 });
 
 test('users cannot view tickets created by someone else', function () {

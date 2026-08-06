@@ -4,6 +4,7 @@ import {
     CalendarClock,
     CheckCircle2,
     Clock3,
+    MessageSquareText,
     Send,
     TicketIcon,
     UserRound,
@@ -21,14 +22,24 @@ import {
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { index } from '@/routes/tickets';
+import { store as storeReply } from '@/routes/tickets/replies';
 import { update as updateStatus } from '@/routes/tickets/status';
-import type { Auth, Ticket, TicketOption, TicketStatusHistory } from '@/types';
+import type {
+    Auth,
+    Ticket,
+    TicketOption,
+    TicketReply,
+    TicketStatusHistory,
+} from '@/types';
 
 type Props = {
     ticket: Ticket;
     availableStatuses: TicketOption[];
     history: {
         data: TicketStatusHistory[];
+    };
+    replies: {
+        data: TicketReply[];
     };
 };
 
@@ -56,6 +67,7 @@ function priorityTone(value: string): string {
         low: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200',
         medium: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-200',
         high: 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/40 dark:text-orange-200',
+        urgent: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-200',
     };
 
     return tones[value] ?? tones.medium;
@@ -97,10 +109,14 @@ export default function TicketShow({
     ticket,
     availableStatuses,
     history,
+    replies,
 }: Props) {
     const { auth } = usePage<PageProps>().props;
     const canUpdateStatus =
         auth.user.role === 'agent' || auth.user.role === 'admin';
+    const availableStatusOptions = availableStatuses ?? [];
+    const ticketHistory = history?.data ?? [];
+    const ticketReplies = replies?.data ?? [];
 
     return (
         <>
@@ -118,7 +134,8 @@ export default function TicketShow({
                             {ticket.title}
                         </h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Assigned to {ticket.assigned_agent?.user?.name ?? 'Unassigned'}.
+                            Assigned to{' '}
+                            {ticket.assigned_agent?.user?.name ?? 'Unassigned'}.
                         </p>
                     </div>
 
@@ -141,7 +158,11 @@ export default function TicketShow({
                         >
                             {ticket.status.label}
                         </Badge>
-                        <Button variant="outline" asChild className="h-10 rounded-lg">
+                        <Button
+                            variant="outline"
+                            asChild
+                            className="h-10 rounded-lg"
+                        >
                             <Link href={index()}>
                                 <ArrowLeft className="size-4" />
                                 Back
@@ -160,7 +181,10 @@ export default function TicketShow({
                         <DetailStat
                             icon={TicketIcon}
                             label="Assigned agent"
-                            value={ticket.assigned_agent?.user?.name ?? 'Unassigned'}
+                            value={
+                                ticket.assigned_agent?.user?.name ??
+                                'Unassigned'
+                            }
                         />
                         <DetailStat
                             icon={CalendarClock}
@@ -178,13 +202,122 @@ export default function TicketShow({
                                     Description
                                 </CardTitle>
                                 <CardDescription>
-                                    Full context submitted for this support request.
+                                    Full context submitted for this support
+                                    request.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-6">
-                                <p className="whitespace-pre-wrap rounded-lg border bg-muted/20 p-4 text-sm leading-6">
+                                <p className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 whitespace-pre-wrap">
                                     {ticket.description}
                                 </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="gap-0 overflow-hidden rounded-lg border-border/70 py-0 shadow-sm">
+                            <CardHeader className="border-b border-border/70 px-6 py-5">
+                                <CardTitle className="text-base">
+                                    Conversation
+                                </CardTitle>
+                                <CardDescription>
+                                    User and support replies for this ticket.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-5 p-6">
+                                <div className="space-y-4">
+                                    {ticketReplies.map((reply) => {
+                                        const isCurrentUser =
+                                            reply.user?.id === auth.user.id;
+
+                                        return (
+                                            <div
+                                                key={reply.id}
+                                                className={cn(
+                                                    'flex gap-3',
+                                                    isCurrentUser &&
+                                                        'justify-end',
+                                                )}
+                                            >
+                                                {!isCurrentUser ? (
+                                                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                                                        <MessageSquareText className="size-4" />
+                                                    </span>
+                                                ) : null}
+                                                <div
+                                                    className={cn(
+                                                        'max-w-[42rem] rounded-lg border bg-background p-4 shadow-xs',
+                                                        isCurrentUser &&
+                                                            'border-blue-200 bg-blue-50 text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-100',
+                                                    )}
+                                                >
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                        <span className="font-medium text-foreground">
+                                                            {reply.user?.name ??
+                                                                'System'}
+                                                        </span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="rounded-full px-2 py-0 text-[11px]"
+                                                        >
+                                                            {reply.user?.role ??
+                                                                'system'}
+                                                        </Badge>
+                                                        <span>
+                                                            {formatDate(
+                                                                reply.created_at,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-3 text-sm leading-6 whitespace-pre-wrap">
+                                                        {reply.body}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {ticketReplies.length === 0 ? (
+                                        <div className="rounded-lg border bg-muted/20 p-5 text-sm text-muted-foreground">
+                                            No replies yet.
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <Form
+                                    {...storeReply.form(ticket.id)}
+                                    resetOnSuccess
+                                    className="space-y-4 rounded-lg border bg-muted/20 p-4"
+                                >
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="body">
+                                                    Reply
+                                                </Label>
+                                                <textarea
+                                                    id="body"
+                                                    name="body"
+                                                    rows={4}
+                                                    placeholder="Write a reply, for example: Terima kasih, sudah bisa."
+                                                    className="resize-y rounded-lg border border-input bg-background px-3 py-3 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                />
+                                                <InputError
+                                                    message={errors.body}
+                                                />
+                                            </div>
+
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                    className="h-10 rounded-lg"
+                                                >
+                                                    <Send className="size-4" />
+                                                    Send reply
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
+                                </Form>
                             </CardContent>
                         </Card>
 
@@ -199,12 +332,12 @@ export default function TicketShow({
                             </CardHeader>
                             <CardContent className="p-6">
                                 <div className="space-y-4">
-                                    {history.data.map((entry) => (
+                                    {ticketHistory.map((entry) => (
                                         <div
                                             key={entry.id}
                                             className="relative border-l border-border/70 pl-5"
                                         >
-                                            <span className="absolute -left-[7px] top-1 flex size-3.5 rounded-full border border-background bg-blue-500" />
+                                            <span className="absolute top-1 -left-[7px] flex size-3.5 rounded-full border border-background bg-blue-500" />
                                             <div className="flex flex-wrap items-center gap-2">
                                                 {entry.from_status ? (
                                                     <>
@@ -212,7 +345,11 @@ export default function TicketShow({
                                                             variant="outline"
                                                             className="rounded-full"
                                                         >
-                                                            {entry.from_status.label}
+                                                            {
+                                                                entry
+                                                                    .from_status
+                                                                    .label
+                                                            }
                                                         </Badge>
                                                         <span className="text-sm text-muted-foreground">
                                                             to
@@ -220,13 +357,15 @@ export default function TicketShow({
                                                     </>
                                                 ) : null}
                                                 <Badge className="rounded-full">
-                                                    {entry.to_status.label}
+                                                    {entry.to_status?.label ??
+                                                        'Unknown'}
                                                 </Badge>
                                             </div>
                                             <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                                                 <Clock3 className="size-4" />
-                                                {entry.changed_by?.name ?? 'System'} ·{' '}
-                                                {formatDate(entry.created_at)}
+                                                {entry.changed_by?.name ??
+                                                    'System'}{' '}
+                                                - {formatDate(entry.created_at)}
                                             </div>
                                             {entry.note ? (
                                                 <p className="mt-2 rounded-lg bg-muted/40 p-3 text-sm">
@@ -236,7 +375,7 @@ export default function TicketShow({
                                         </div>
                                     ))}
 
-                                    {history.data.length === 0 ? (
+                                    {ticketHistory.length === 0 ? (
                                         <div className="rounded-lg border bg-muted/20 p-5 text-sm text-muted-foreground">
                                             No status history recorded yet.
                                         </div>
@@ -256,7 +395,8 @@ export default function TicketShow({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-6">
-                            {canUpdateStatus && availableStatuses.length > 0 ? (
+                            {canUpdateStatus &&
+                            availableStatusOptions.length > 0 ? (
                                 <Form
                                     {...updateStatus.form(ticket.id)}
                                     className="space-y-5"
@@ -270,33 +410,46 @@ export default function TicketShow({
                                                 <select
                                                     id="status"
                                                     name="status"
-                                                    className="h-11 rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                    className="h-11 rounded-lg border border-input bg-background px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                                     defaultValue={
-                                                        availableStatuses[0]?.value
+                                                        availableStatusOptions[0]
+                                                            ?.value
                                                     }
                                                 >
-                                                    {availableStatuses.map((status) => (
-                                                        <option
-                                                            key={status.value}
-                                                            value={status.value}
-                                                        >
-                                                            {status.label}
-                                                        </option>
-                                                    ))}
+                                                    {availableStatusOptions.map(
+                                                        (status) => (
+                                                            <option
+                                                                key={
+                                                                    status.value
+                                                                }
+                                                                value={
+                                                                    status.value
+                                                                }
+                                                            >
+                                                                {status.label}
+                                                            </option>
+                                                        ),
+                                                    )}
                                                 </select>
-                                                <InputError message={errors.status} />
+                                                <InputError
+                                                    message={errors.status}
+                                                />
                                             </div>
 
                                             <div className="grid gap-2">
-                                                <Label htmlFor="note">Note</Label>
+                                                <Label htmlFor="note">
+                                                    Note
+                                                </Label>
                                                 <textarea
                                                     id="note"
                                                     name="note"
                                                     rows={4}
                                                     placeholder="Add an internal status note."
-                                                    className="resize-y rounded-lg border border-input bg-background px-3 py-3 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                    className="resize-y rounded-lg border border-input bg-background px-3 py-3 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                                 />
-                                                <InputError message={errors.note} />
+                                                <InputError
+                                                    message={errors.note}
+                                                />
                                             </div>
 
                                             <Button
@@ -323,7 +476,8 @@ export default function TicketShow({
                                     <CheckCircle2 className="size-4 text-emerald-600" />
                                     Current workflow
                                 </div>
-                                Keep status notes short, factual, and tied to the latest action.
+                                Keep status notes short, factual, and tied to
+                                the latest action.
                             </div>
                         </CardContent>
                     </Card>

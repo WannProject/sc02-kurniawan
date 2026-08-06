@@ -25,6 +25,16 @@ return new class extends Migration
             $table->index(['assigned_agent_id', 'status']);
             $table->index(['status', 'created_at']);
         });
+
+        Schema::create('ticket_replies', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->text('body');
+            $table->timestamps();
+
+            $table->index(['ticket_id', 'created_at']);
+        });
     }
 
     /**
@@ -32,6 +42,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('ticket_replies');
         Schema::dropIfExists('tickets');
     }
 };

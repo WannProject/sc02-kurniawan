@@ -36,6 +36,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Team> $teams
  * @property-read Agent|null $agent
  * @property-read Collection<int, Ticket> $createdTickets
+ * @property-read Collection<int, TicketReply> $ticketReplies
  */
 #[Fillable(['name', 'email', 'password', 'current_team_id', 'role'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -58,6 +59,14 @@ class User extends Authenticatable
     public function createdTickets(): HasMany
     {
         return $this->hasMany(Ticket::class, 'created_by_id');
+    }
+
+    /**
+     * @return HasMany<TicketReply, $this>
+     */
+    public function ticketReplies(): HasMany
+    {
+        return $this->hasMany(TicketReply::class);
     }
 
     public function isUser(): bool

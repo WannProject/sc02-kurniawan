@@ -8,6 +8,7 @@ import {
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -122,8 +123,19 @@ export default function Dashboard({
         ticketStats.length > 0
             ? ticketStats
             : [{ value: 'none', label: 'No data', count: 0 }];
+    const [activeStatus, setActiveStatus] = useState(
+        series[0]?.value ?? 'none',
+    );
     const maxCount = Math.max(...series.map((item) => item.count), 1);
-    const visibleTickets = recentTickets.slice(0, 10);
+    const activeStatusStat =
+        series.find((stat) => stat.value === activeStatus) ?? series[0];
+    const filteredTickets =
+        activeStatusStat?.value === 'none'
+            ? []
+            : recentTickets.filter(
+                  (ticket) => ticket.status.value === activeStatusStat?.value,
+              );
+    const visibleTickets = filteredTickets.slice(0, 10);
 
     return (
         <>
@@ -182,23 +194,39 @@ export default function Dashboard({
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline" className="rounded-full">
+                                <Badge
+                                    variant="outline"
+                                    className="rounded-full"
+                                >
                                     Peak: {peakStat?.label ?? 'No data'}
                                 </Badge>
-                                <Badge variant="secondary" className="rounded-full">
+                                <Badge
+                                    variant="secondary"
+                                    className="rounded-full"
+                                >
                                     {totalTickets.toLocaleString('en-US')} total
                                 </Badge>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-6 border-b border-border/70 px-5">
-                            {series.map((stat, index) => (
+                        <div
+                            className="flex flex-wrap items-center gap-6 border-b border-border/70 px-5"
+                            role="tablist"
+                            aria-label="Ticket status filter"
+                        >
+                            {series.map((stat) => (
                                 <button
                                     key={stat.value}
                                     type="button"
+                                    role="tab"
+                                    aria-selected={
+                                        activeStatusStat?.value === stat.value
+                                    }
+                                    onClick={() => setActiveStatus(stat.value)}
                                     className={cn(
-                                        'flex h-14 items-center gap-2 border-b-2 border-transparent text-sm text-muted-foreground',
-                                        index === 0 &&
+                                        'flex h-14 items-center gap-2 border-b-2 border-transparent text-sm text-muted-foreground transition-colors hover:text-foreground',
+                                        activeStatusStat?.value ===
+                                            stat.value &&
                                             'border-blue-600 text-foreground',
                                     )}
                                 >
@@ -302,15 +330,16 @@ export default function Dashboard({
 
                         {visibleTickets.length === 0 ? (
                             <div className="px-5 py-10 text-sm text-muted-foreground">
-                                No tickets yet. Create the first ticket to start
-                                the queue.
+                                No {activeStatusStat?.label.toLowerCase()}{' '}
+                                tickets found in recent activity.
                             </div>
                         ) : null}
 
                         <div className="flex flex-col gap-3 border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 Showing {visibleTickets.length} of{' '}
-                                {recentTickets.length} recent tickets
+                                {filteredTickets.length} recent{' '}
+                                {activeStatusStat?.label.toLowerCase()} tickets
                             </div>
                             <Button variant="outline" size="sm" asChild>
                                 <Link href={ticketsIndex()}>
