@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->removeLegacyDemoUsers();
 
-        $user = $this->seedUser('Kurniawan', env('SEED_USER_EMAIL', 'user@example.com'), UserRole::User);
+        $user = $this->seedUser('User', env('SEED_USER_EMAIL', 'user@example.com'), UserRole::User);
 
         $agent = $this->seedUser('Agent User', env('SEED_AGENT_EMAIL', 'agent@example.com'), UserRole::Agent);
         $supportAgent = Agent::query()->updateOrCreate(
