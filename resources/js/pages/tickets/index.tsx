@@ -151,8 +151,7 @@ export default function TicketsIndex({ tickets }: Props) {
             <h1 className="sr-only">Tickets</h1>
 
             <div className="min-h-[calc(100vh-5rem)] bg-[#f7f7fb] px-5 py-6 md:px-7">
-                <section className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                </section>
+                <section className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"></section>
 
                 <section className="overflow-hidden rounded-lg border border-border/70 bg-background shadow-sm">
                     <div className="grid md:grid-cols-2 xl:grid-cols-4">
