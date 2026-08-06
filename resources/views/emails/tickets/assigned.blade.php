@@ -7,6 +7,12 @@ Anda ditugaskan untuk menangani tiket #{{ $ticket->id }}.
 
 **Prioritas:** {{ $ticket->priority->label() }}
 
+**Deskripsi:**
+
+<x-mail::panel>
+{{ $ticket->description }}
+</x-mail::panel>
+
 <x-mail::button :url="route('tickets.show', $ticket)">
 Buka Tiket
 </x-mail::button>

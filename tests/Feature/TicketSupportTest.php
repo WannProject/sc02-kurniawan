@@ -202,6 +202,7 @@ test('assignment notification email content is localized', function () {
     $agent = Agent::factory()->for($agentUser)->create();
     $ticket = Ticket::factory()->assigned($agent)->create([
         'title' => 'Printer tidak bisa dipakai',
+        'description' => 'Printer kasir tidak merespons sejak pagi.',
         'priority' => TicketPriority::High,
     ]);
 
@@ -211,6 +212,8 @@ test('assignment notification email content is localized', function () {
     $mailable->assertSeeInHtml('Tiket baru ditugaskan');
     $mailable->assertSeeInHtml('Anda ditugaskan untuk menangani tiket');
     $mailable->assertSeeInHtml('Printer tidak bisa dipakai');
+    $mailable->assertSeeInHtml('Printer kasir tidak merespons sejak pagi.');
+    $mailable->assertSeeInText('Printer kasir tidak merespons sejak pagi.');
     $mailable->assertSeeInText('**Prioritas:** High');
 });
 
@@ -326,6 +329,7 @@ test('resolved notification email content is localized', function () {
     $user = User::factory()->create();
     $ticket = Ticket::factory()->for($user, 'creator')->create([
         'title' => 'Printer tidak bisa dipakai',
+        'description' => 'Printer kasir tidak merespons sejak pagi.',
         'priority' => TicketPriority::Medium,
         'status' => TicketStatus::Resolved,
     ]);
@@ -335,6 +339,8 @@ test('resolved notification email content is localized', function () {
     $mailable->assertHasSubject('Tiket selesai: Printer tidak bisa dipakai');
     $mailable->assertSeeInHtml('Tiket selesai');
     $mailable->assertSeeInHtml('Tiket #'.$ticket->id.' telah ditandai selesai.');
+    $mailable->assertSeeInHtml('Printer kasir tidak merespons sejak pagi.');
+    $mailable->assertSeeInText('Printer kasir tidak merespons sejak pagi.');
     $mailable->assertSeeInHtml('Jika masih ada kendala');
     $mailable->assertSeeInText('**Prioritas:** Medium');
 });

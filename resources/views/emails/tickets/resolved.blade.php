@@ -7,6 +7,12 @@ Tiket #{{ $ticket->id }} telah ditandai selesai.
 
 **Prioritas:** {{ $ticket->priority->label() }}
 
+**Deskripsi:**
+
+<x-mail::panel>
+{{ $ticket->description }}
+</x-mail::panel>
+
 Jika masih ada kendala, silakan balas tiket ini agar agent dapat membantu kembali.
 
 <x-mail::button :url="route('tickets.show', $ticket)">
