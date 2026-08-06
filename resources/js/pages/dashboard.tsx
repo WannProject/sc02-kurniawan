@@ -5,6 +5,7 @@ import {
     Clock3,
     Ticket as TicketIcon,
     TrendingUp,
+    UserCog,
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
     index as ticketsIndex,
     show as showTicket,
 } from '@/routes/tickets';
+import { index as agentsIndex } from '@/routes/agents';
 import type { Ticket as TicketModel, TicketStatusStat } from '@/types';
 
 type Props = {
@@ -109,6 +111,7 @@ export default function Dashboard({
 }: Props) {
     const { auth } = usePage().props;
     const canCreateTicket = auth.user.role === 'user';
+    const canManageAgents = auth.user.role === 'admin';
 
     const totalTickets = ticketStats.reduce(
         (carry, stat) => carry + stat.count,
@@ -420,6 +423,17 @@ export default function Dashboard({
                                         <Link href={createTicket()}>
                                             Create ticket
                                             <ArrowUpRight className="size-4" />
+                                        </Link>
+                                    </Button>
+                                ) : null}
+                                {canManageAgents ? (
+                                    <Button
+                                        className="h-11 w-full justify-between rounded-lg"
+                                        asChild
+                                    >
+                                        <Link href={agentsIndex()}>
+                                            Manage agents
+                                            <UserCog className="size-4" />
                                         </Link>
                                     </Button>
                                 ) : null}
