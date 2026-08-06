@@ -5,8 +5,10 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\SendTicketAssignedNotificationJob;
 use App\Jobs\SendTicketReplyNotificationJob;
+use App\Jobs\SendTicketResolvedNotificationJob;
 use App\Mail\TicketAssignedMail;
 use App\Mail\TicketReplyCreatedMail;
+use App\Mail\TicketResolvedMail;
 use App\Models\Agent;
 use App\Models\Ticket;
 use App\Models\TicketReply;
@@ -195,6 +197,23 @@ test('reply notification email contains the saved agent reply body', function ()
     $mailable->assertSeeInText('Halo, tiketnya sudah kami cek dari dashboard agent.');
 });
 
+test('assignment notification email content is localized', function () {
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->assigned($agent)->create([
+        'title' => 'Printer tidak bisa dipakai',
+        'priority' => TicketPriority::High,
+    ]);
+
+    $mailable = new TicketAssignedMail($ticket);
+
+    $mailable->assertHasSubject('Tiket baru ditugaskan: Printer tidak bisa dipakai');
+    $mailable->assertSeeInHtml('Tiket baru ditugaskan');
+    $mailable->assertSeeInHtml('Anda ditugaskan untuk menangani tiket');
+    $mailable->assertSeeInHtml('Printer tidak bisa dipakai');
+    $mailable->assertSeeInText('**Prioritas:** High');
+});
+
 test('users cannot reply to tickets created by someone else', function () {
     $owner = User::factory()->create();
     $visitor = User::factory()->create();
@@ -259,6 +278,65 @@ test('valid status transitions are accepted', function () {
         'changed_by_id' => $agentUser->id,
         'note' => 'Starting work.',
     ]);
+});
+
+test('resolved status queues creator email notification', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create([
+        'status' => TicketStatus::InProgress,
+    ]);
+
+    $response = $this
+        ->actingAs($agentUser)
+        ->patch(route('tickets.status.update', $ticket), [
+            'status' => TicketStatus::Resolved->value,
+            'note' => 'Issue fixed.',
+        ]);
+
+    $response->assertRedirect();
+
+    expect($ticket->fresh()->status)->toBe(TicketStatus::Resolved);
+
+    Queue::assertPushed(SendTicketResolvedNotificationJob::class, fn (SendTicketResolvedNotificationJob $job) => $job->ticketId === $ticket->id);
+});
+
+test('resolved notification email is sent to the ticket creator', function () {
+    Mail::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create([
+        'title' => 'Printer tidak bisa dipakai',
+        'status' => TicketStatus::Resolved,
+    ]);
+
+    (new SendTicketResolvedNotificationJob($ticket->id))->handle();
+
+    Mail::assertSent(TicketResolvedMail::class, fn (TicketResolvedMail $mail) => $mail->hasTo($user->email)
+        && $mail->ticket->is($ticket));
+    Mail::assertNotSent(TicketResolvedMail::class, fn (TicketResolvedMail $mail) => $mail->hasTo($agentUser->email));
+});
+
+test('resolved notification email content is localized', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->create([
+        'title' => 'Printer tidak bisa dipakai',
+        'priority' => TicketPriority::Medium,
+        'status' => TicketStatus::Resolved,
+    ]);
+
+    $mailable = new TicketResolvedMail($ticket);
+
+    $mailable->assertHasSubject('Tiket selesai: Printer tidak bisa dipakai');
+    $mailable->assertSeeInHtml('Tiket selesai');
+    $mailable->assertSeeInHtml('Tiket #'.$ticket->id.' telah ditandai selesai.');
+    $mailable->assertSeeInHtml('Jika masih ada kendala');
+    $mailable->assertSeeInText('**Prioritas:** Medium');
 });
 
 test('admins can update ticket status even when not assigned', function () {

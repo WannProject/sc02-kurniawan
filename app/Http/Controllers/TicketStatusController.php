@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\TicketStatus;
 use App\Exceptions\InvalidStatusTransitionException;
 use App\Http\Requests\UpdateTicketStatusRequest;
+use App\Jobs\SendTicketResolvedNotificationJob;
 use App\Models\Ticket;
 use App\Services\TicketStatusService;
 use Illuminate\Http\RedirectResponse;
@@ -19,10 +20,12 @@ class TicketStatusController extends Controller
         Ticket $ticket,
         TicketStatusService $statusService,
     ): RedirectResponse {
+        $toStatus = TicketStatus::from($request->validated('status'));
+
         try {
-            $statusService->transition(
+            $updatedTicket = $statusService->transition(
                 ticket: $ticket,
-                toStatus: TicketStatus::from($request->validated('status')),
+                toStatus: $toStatus,
                 changedBy: $request->user(),
                 note: $request->validated('note'),
             );
@@ -37,6 +40,10 @@ class TicketStatusController extends Controller
             throw ValidationException::withMessages([
                 'status' => $exception->getMessage(),
             ]);
+        }
+
+        if ($toStatus === TicketStatus::Resolved) {
+            SendTicketResolvedNotificationJob::dispatch($updatedTicket->id);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket status updated.')]);
