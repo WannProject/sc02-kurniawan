@@ -1,7 +1,7 @@
 <x-mail::message>
-# Tiket baru ditugaskan
+# Tiket selesai
 
-Anda ditugaskan untuk menangani tiket #{{ $ticket->id }}.
+Tiket #{{ $ticket->id }} telah ditandai selesai.
 
 **Judul:** {{ $ticket->title }}
 
@@ -12,6 +12,8 @@ Anda ditugaskan untuk menangani tiket #{{ $ticket->id }}.
 <x-mail::panel>
 {{ $ticket->description }}
 </x-mail::panel>
+
+Jika masih ada kendala, silakan balas tiket ini agar agent dapat membantu kembali.
 
 <x-mail::button :url="route('tickets.show', $ticket)">
 Buka Tiket

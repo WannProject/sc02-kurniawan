@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class TicketAssignedMail extends Mailable
+class TicketResolvedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -25,7 +25,7 @@ class TicketAssignedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Tiket baru ditugaskan: {$this->ticket->title}",
+            subject: "Tiket selesai: {$this->ticket->title}",
         );
     }
 
@@ -35,7 +35,7 @@ class TicketAssignedMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.tickets.assigned',
+            markdown: 'emails.tickets.resolved',
             with: [
                 'ticket' => $this->ticket,
             ],

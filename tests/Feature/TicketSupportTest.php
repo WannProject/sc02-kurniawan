@@ -5,8 +5,10 @@ use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\SendTicketAssignedNotificationJob;
 use App\Jobs\SendTicketReplyNotificationJob;
+use App\Jobs\SendTicketResolvedNotificationJob;
 use App\Mail\TicketAssignedMail;
 use App\Mail\TicketReplyCreatedMail;
+use App\Mail\TicketResolvedMail;
 use App\Models\Agent;
 use App\Models\Ticket;
 use App\Models\TicketReply;
@@ -64,6 +66,70 @@ test('tickets create page can be rendered', function () {
             ->component('tickets/create')
             ->has('priorities', 3)
         );
+});
+
+test('api tickets endpoint creates and assigns tickets asynchronously', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('api.tickets.store'), [
+            'title' => 'Mesin printer offline',
+            'description' => 'Printer kasir tidak bisa mencetak struk.',
+            'priority' => TicketPriority::High->value,
+        ]);
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('data.title', 'Mesin printer offline')
+        ->assertJsonPath('data.description', 'Printer kasir tidak bisa mencetak struk.')
+        ->assertJsonPath('data.priority.value', TicketPriority::High->value)
+        ->assertJsonPath('data.status.value', TicketStatus::Assigned->value)
+        ->assertJsonPath('data.created_by.email', $user->email)
+        ->assertJsonPath('data.assigned_agent.user.email', $agentUser->email);
+
+    $ticket = Ticket::query()->where('title', 'Mesin printer offline')->firstOrFail();
+
+    expect($ticket->creator->is($user))->toBeTrue()
+        ->and($ticket->assigned_agent_id)->toBe($agent->id)
+        ->and($ticket->status)->toBe(TicketStatus::Assigned);
+
+    Queue::assertPushed(SendTicketAssignedNotificationJob::class, fn (SendTicketAssignedNotificationJob $job) => $job->ticketId === $ticket->id
+        && $job->agentId === $agent->id);
+});
+
+test('api tickets endpoint returns validation errors as json', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('api.tickets.store'), [
+            'title' => '',
+            'description' => '',
+            'priority' => 'urgent',
+        ]);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['title', 'description', 'priority']);
+});
+
+test('agents cannot create tickets through the api endpoint', function () {
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+
+    $response = $this
+        ->actingAs($agentUser)
+        ->postJson(route('api.tickets.store'), [
+            'title' => 'Mesin printer offline',
+            'description' => 'Printer kasir tidak bisa mencetak struk.',
+            'priority' => TicketPriority::High->value,
+        ]);
+
+    $response->assertForbidden();
 });
 
 test('ticket show page can be rendered with transitions', function () {
@@ -195,6 +261,26 @@ test('reply notification email contains the saved agent reply body', function ()
     $mailable->assertSeeInText('Halo, tiketnya sudah kami cek dari dashboard agent.');
 });
 
+test('assignment notification email content is localized', function () {
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->assigned($agent)->create([
+        'title' => 'Printer tidak bisa dipakai',
+        'description' => 'Printer kasir tidak merespons sejak pagi.',
+        'priority' => TicketPriority::High,
+    ]);
+
+    $mailable = new TicketAssignedMail($ticket);
+
+    $mailable->assertHasSubject('Tiket baru ditugaskan: Printer tidak bisa dipakai');
+    $mailable->assertSeeInHtml('Tiket baru ditugaskan');
+    $mailable->assertSeeInHtml('Anda ditugaskan untuk menangani tiket');
+    $mailable->assertSeeInHtml('Printer tidak bisa dipakai');
+    $mailable->assertSeeInHtml('Printer kasir tidak merespons sejak pagi.');
+    $mailable->assertSeeInText('Printer kasir tidak merespons sejak pagi.');
+    $mailable->assertSeeInText('**Prioritas:** High');
+});
+
 test('users cannot reply to tickets created by someone else', function () {
     $owner = User::factory()->create();
     $visitor = User::factory()->create();
@@ -259,6 +345,68 @@ test('valid status transitions are accepted', function () {
         'changed_by_id' => $agentUser->id,
         'note' => 'Starting work.',
     ]);
+});
+
+test('resolved status queues creator email notification', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create([
+        'status' => TicketStatus::InProgress,
+    ]);
+
+    $response = $this
+        ->actingAs($agentUser)
+        ->patch(route('tickets.status.update', $ticket), [
+            'status' => TicketStatus::Resolved->value,
+            'note' => 'Issue fixed.',
+        ]);
+
+    $response->assertRedirect();
+
+    expect($ticket->fresh()->status)->toBe(TicketStatus::Resolved);
+
+    Queue::assertPushed(SendTicketResolvedNotificationJob::class, fn (SendTicketResolvedNotificationJob $job) => $job->ticketId === $ticket->id);
+});
+
+test('resolved notification email is sent to the ticket creator', function () {
+    Mail::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create([
+        'title' => 'Printer tidak bisa dipakai',
+        'status' => TicketStatus::Resolved,
+    ]);
+
+    (new SendTicketResolvedNotificationJob($ticket->id))->handle();
+
+    Mail::assertSent(TicketResolvedMail::class, fn (TicketResolvedMail $mail) => $mail->hasTo($user->email)
+        && $mail->ticket->is($ticket));
+    Mail::assertNotSent(TicketResolvedMail::class, fn (TicketResolvedMail $mail) => $mail->hasTo($agentUser->email));
+});
+
+test('resolved notification email content is localized', function () {
+    $user = User::factory()->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->create([
+        'title' => 'Printer tidak bisa dipakai',
+        'description' => 'Printer kasir tidak merespons sejak pagi.',
+        'priority' => TicketPriority::Medium,
+        'status' => TicketStatus::Resolved,
+    ]);
+
+    $mailable = new TicketResolvedMail($ticket);
+
+    $mailable->assertHasSubject('Tiket selesai: Printer tidak bisa dipakai');
+    $mailable->assertSeeInHtml('Tiket selesai');
+    $mailable->assertSeeInHtml('Tiket #'.$ticket->id.' telah ditandai selesai.');
+    $mailable->assertSeeInHtml('Printer kasir tidak merespons sejak pagi.');
+    $mailable->assertSeeInText('Printer kasir tidak merespons sejak pagi.');
+    $mailable->assertSeeInHtml('Jika masih ada kendala');
+    $mailable->assertSeeInText('**Prioritas:** Medium');
 });
 
 test('admins can update ticket status even when not assigned', function () {
