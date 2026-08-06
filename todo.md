@@ -65,7 +65,9 @@ Dokumen ini mencatat urutan kerja yang perlu dieksekusi pada sistem antrian tike
 
 - [x] Tambahkan role aplikasi dasar `user`, `agent`, dan `admin` pada model user.
 - [x] Pastikan user baru terdaftar sebagai `user` secara default.
-- [ ] Tambahkan pembatasan akses berbasis role di area admin dan agent.
+- [x] Tambahkan pembatasan akses berbasis role di area ticket create, ticket index, ticket show, dan status update.
+- [x] Buka akses status update untuk admin sebagai override.
+- [ ] Tambahkan pembatasan akses berbasis role di area admin settings yang tersisa.
 
 ## Urutan Eksekusi yang Disarankan
 

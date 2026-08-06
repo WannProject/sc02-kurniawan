@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,9 @@ type Props = {
 };
 
 export default function TicketsIndex({ tickets }: Props) {
+    const { auth } = usePage().props;
+    const canCreateTicket = auth.user.role === 'user';
+
     return (
         <>
             <Head title="Tickets" />
@@ -25,11 +28,13 @@ export default function TicketsIndex({ tickets }: Props) {
                         description="Review support tickets and assignment state"
                     />
 
-                    <Button asChild>
-                        <Link href={create()}>
-                            <Plus /> New ticket
-                        </Link>
-                    </Button>
+                    {canCreateTicket ? (
+                        <Button asChild>
+                            <Link href={create()}>
+                                <Plus /> New ticket
+                            </Link>
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="space-y-3">

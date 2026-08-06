@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, Plus } from 'lucide-react';
 import { useState } from 'react';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
@@ -30,6 +30,8 @@ export default function Dashboard({
     ticketStats = [],
     recentTickets = [],
 }: Props) {
+    const { auth } = usePage().props;
+    const canCreateTicket = auth.user.role === 'user';
     const [showInvitations, setShowInvitations] = useState(
         pendingInvitations.length > 0,
     );
@@ -67,12 +69,14 @@ export default function Dashboard({
                                 View tickets
                             </Link>
                         </Button>
-                        <Button asChild>
-                            <Link href={createTicket()}>
-                                <Plus />
-                                New ticket
-                            </Link>
-                        </Button>
+                        {canCreateTicket ? (
+                            <Button asChild>
+                                <Link href={createTicket()}>
+                                    <Plus />
+                                    New ticket
+                                </Link>
+                            </Button>
+                        ) : null}
                     </div>
                 </div>
 
@@ -163,12 +167,14 @@ export default function Dashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <Button className="w-full justify-between" asChild>
-                                <Link href={createTicket()}>
-                                    Create ticket
-                                    <Plus />
-                                </Link>
-                            </Button>
+                            {canCreateTicket ? (
+                                <Button className="w-full justify-between" asChild>
+                                    <Link href={createTicket()}>
+                                        Create ticket
+                                        <Plus />
+                                    </Link>
+                                </Button>
+                            ) : null}
                             <Button
                                 variant="outline"
                                 className="w-full justify-between"

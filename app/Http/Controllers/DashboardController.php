@@ -13,7 +13,8 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $email = strtolower($request->user()->email);
+        $user = $request->user();
+        $email = strtolower($user->email);
 
         $pendingInvitations = TeamInvitation::query()
             ->with(['inviter', 'team'])
@@ -33,17 +34,23 @@ class DashboardController extends Controller
                 ],
             ]);
 
+        $ticketQuery = Ticket::query();
+
+        if ($user->isUser()) {
+            $ticketQuery->whereBelongsTo($user, 'creator');
+        }
+
         $ticketStats = collect(TicketStatus::cases())
             ->map(fn (TicketStatus $status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
-                'count' => Ticket::query()
+                'count' => (clone $ticketQuery)
                     ->where('status', $status)
                     ->count(),
             ])
             ->values();
 
-        $recentTickets = Ticket::query()
+        $recentTickets = (clone $ticketQuery)
             ->with(['creator', 'assignedAgent.user'])
             ->latest()
             ->limit(5)

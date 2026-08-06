@@ -3,8 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Enums\TicketPriority;
+use App\Models\Ticket;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
@@ -15,7 +17,7 @@ class StoreTicketRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return Gate::allows('create', Ticket::class);
     }
 
     /**
