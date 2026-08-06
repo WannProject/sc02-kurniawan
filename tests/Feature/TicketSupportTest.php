@@ -4,7 +4,9 @@ use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\UserRole;
 use App\Jobs\SendTicketAssignedNotificationJob;
+use App\Jobs\SendTicketReplyNotificationJob;
 use App\Mail\TicketAssignedMail;
+use App\Mail\TicketReplyCreatedMail;
 use App\Models\Agent;
 use App\Models\Ticket;
 use App\Models\TicketReply;
@@ -103,6 +105,8 @@ test('ticket show page can be rendered with transitions', function () {
 });
 
 test('users can reply to their own tickets', function () {
+    Queue::fake();
+
     $user = User::factory()->create();
     $ticket = Ticket::factory()->for($user, 'creator')->create();
 
@@ -114,11 +118,81 @@ test('users can reply to their own tickets', function () {
 
     $response->assertRedirect();
 
-    $this->assertDatabaseHas('ticket_replies', [
-        'ticket_id' => $ticket->id,
-        'user_id' => $user->id,
-        'body' => 'Terima kasih, sudah bisa.',
+    $reply = TicketReply::query()
+        ->whereBelongsTo($ticket)
+        ->whereBelongsTo($user)
+        ->where('body', 'Terima kasih, sudah bisa.')
+        ->firstOrFail();
+
+    $this->assertModelExists($reply);
+
+    Queue::assertPushed(SendTicketReplyNotificationJob::class, fn (SendTicketReplyNotificationJob $job) => $job->replyId === $reply->id);
+});
+
+test('user replies notify the assigned agent by email', function () {
+    Mail::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create([
+        'name' => 'Agent User',
+        'role' => UserRole::Agent,
     ]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create();
+    $reply = TicketReply::factory()
+        ->for($ticket)
+        ->for($user)
+        ->create(['body' => 'Terima kasih, ini sudah jalan.']);
+
+    (new SendTicketReplyNotificationJob($reply->id))->handle();
+
+    Mail::assertSent(TicketReplyCreatedMail::class, fn (TicketReplyCreatedMail $mail) => $mail->hasTo($agentUser->email)
+        && $mail->reply->is($reply));
+    Mail::assertNotSent(TicketReplyCreatedMail::class, fn (TicketReplyCreatedMail $mail) => $mail->hasTo($user->email));
+});
+
+test('agent replies notify the ticket creator by email', function () {
+    Mail::fake();
+
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create(['role' => UserRole::Agent]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create();
+    $reply = TicketReply::factory()
+        ->for($ticket)
+        ->for($agentUser)
+        ->create(['body' => 'Baik, tiket ini sudah kami cek.']);
+
+    (new SendTicketReplyNotificationJob($reply->id))->handle();
+
+    Mail::assertSent(TicketReplyCreatedMail::class, fn (TicketReplyCreatedMail $mail) => $mail->hasTo($user->email)
+        && $mail->reply->is($reply));
+    Mail::assertNotSent(TicketReplyCreatedMail::class, fn (TicketReplyCreatedMail $mail) => $mail->hasTo($agentUser->email));
+});
+
+test('reply notification email contains the saved agent reply body', function () {
+    $user = User::factory()->create();
+    $agentUser = User::factory()->create([
+        'name' => 'Agent User',
+        'role' => UserRole::Agent,
+    ]);
+    $agent = Agent::factory()->for($agentUser)->create();
+    $ticket = Ticket::factory()->for($user, 'creator')->assigned($agent)->create([
+        'title' => 'Printer tidak bisa dipakai',
+    ]);
+    $reply = TicketReply::factory()
+        ->for($ticket)
+        ->for($agentUser)
+        ->create([
+            'body' => 'Halo, tiketnya sudah kami cek dari dashboard agent.',
+        ]);
+
+    $mailable = new TicketReplyCreatedMail($reply);
+
+    $mailable->assertHasSubject("Balasan baru pada tiket #{$ticket->id}: Printer tidak bisa dipakai");
+    $mailable->assertSeeInHtml('Agent User');
+    $mailable->assertSeeInHtml('Halo, tiketnya sudah kami cek dari dashboard agent.');
+    $mailable->assertSeeInText('Halo, tiketnya sudah kami cek dari dashboard agent.');
 });
 
 test('users cannot reply to tickets created by someone else', function () {

@@ -20,16 +20,33 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = $this->seedUser('Test User', 'test@example.com', UserRole::User);
+        $this->removeLegacyDemoUsers();
 
-        $agent = $this->seedUser('Agent User', 'agent@example.com', UserRole::Agent);
+        $user = $this->seedUser('Kurniawan', 'awankurniawan7889@gmail.com', UserRole::User);
+
+        $agent = $this->seedUser('Agent User', 'inovasita.id@gmail.com', UserRole::Agent);
         $supportAgent = Agent::query()->updateOrCreate(
             ['user_id' => $agent->id],
             ['is_active' => true],
         );
 
         $this->seedUser('Admin User', 'admin@example.com', UserRole::Admin);
+        $this->removeAgentsForNonAgentUsers();
         $this->seedDemoTicket($user, $supportAgent);
+    }
+
+    private function removeLegacyDemoUsers(): void
+    {
+        User::query()
+            ->where('email', 'test@example.com')
+            ->delete();
+    }
+
+    private function removeAgentsForNonAgentUsers(): void
+    {
+        Agent::query()
+            ->whereHas('user', fn ($query) => $query->where('role', '!=', UserRole::Agent->value))
+            ->delete();
     }
 
     private function seedUser(string $name, string $email, UserRole $role): User
