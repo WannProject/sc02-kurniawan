@@ -2,6 +2,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import {
     SidebarGroup,
     SidebarGroupContent,
+    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -21,13 +22,16 @@ export function NavFooter({
             {...props}
             className={`group-data-[collapsible=icon]:p-0 ${className || ''}`}
         >
+            <SidebarGroupLabel className="px-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Resources
+            </SidebarGroupLabel>
             <SidebarGroupContent>
                 <SidebarMenu>
                     {items.map((item) => (
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
                                 asChild
-                                className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
+                                className="h-9 rounded-lg text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
                             >
                                 <a
                                     href={toUrl(item.href)}
